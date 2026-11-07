@@ -16,6 +16,36 @@ SIGNATURES = (
     (b"RIFF", "WAV", {".wav"}),
     (b"MZ", "Windows Executable", {".exe", ".dll", ".sys", ".scr", ".com"}),
 )
+TEXT_SCAN_LIMIT = 1024 * 1024
+TEXT_CONTROL_WHITELIST = {9, 10, 12, 13}
+
+
+def _looks_like_plain_text(file_path: str | Path) -> bool:
+    """Conservatively identify small, decodable text content.
+
+    The scan is deliberately bounded so an unknown large binary file is not
+    loaded into memory merely because its name suggests a text format.
+    """
+    path = Path(file_path)
+    try:
+        with path.open("rb") as evidence_file:
+            content = evidence_file.read(TEXT_SCAN_LIMIT + 1)
+    except OSError as exc:
+        raise OSError(f"Unable to read evidence file '{path}': {exc}") from exc
+
+    if len(content) > TEXT_SCAN_LIMIT or b"\x00" in content:
+        return False
+    try:
+        decoded = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return False
+    controls = sum(
+        1
+        for character in decoded
+        if ord(character) < 32 and ord(character) not in TEXT_CONTROL_WHITELIST
+        or ord(character) == 127
+    )
+    return not decoded or controls / max(len(decoded), 1) <= 0.01
 
 
 def _read_signature(file_path: str | Path) -> bytes:
@@ -40,6 +70,8 @@ def identify_file_type(file_path: str | Path) -> str:
         return "MP4"
     if len(header) >= 2 and header[0] == 0xFF and header[1] & 0xE0 == 0xE0:
         return "MP3"
+    if _looks_like_plain_text(file_path):
+        return "Plain Text"
     return "Unknown"
 
 
@@ -54,6 +86,8 @@ def compare_extension(file_path: str | Path, detected_type: str | None = None) -
     )
     if detected == "MP4":
         expected_extensions = {".mp4", ".m4v", ".mov"}
+    if detected == "Plain Text":
+        expected_extensions = {".txt", ".text", ".log", ".md", ".csv"}
     extension_mismatch = bool(declared_extension) and (
         not expected_extensions or declared_extension not in expected_extensions
     )

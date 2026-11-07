@@ -24,7 +24,7 @@ def _image_metadata(path: Path) -> dict[str, object]:
             if not exif:
                 return {"status": "missing", "values": {}}
             values = {str(key): str(value) for key, value in exif.items()}
-            return {"status": "available", "values": values}
+            return {"status": "extracted", "values": values}
     except (OSError, UnidentifiedImageError) as exc:
         return {"status": "unavailable", "reason": str(exc), "values": {}}
 
@@ -41,7 +41,7 @@ def _pdf_metadata(path: Path) -> dict[str, object]:
             for key, value in metadata.items()
             if value is not None
         }
-        return {"status": "available" if values else "missing", "values": values}
+        return {"status": "extracted" if values else "missing", "values": values}
     except (OSError, PdfReadError, ValueError) as exc:
         return {"status": "unavailable", "reason": str(exc), "values": {}}
 
@@ -61,9 +61,9 @@ def extract_metadata(file_path: str | Path) -> dict[str, object]:
         "extension": extension,
         "creation_time": _time_or_unavailable(getattr(stat, "st_ctime", None)),
         "modification_time": _time_or_unavailable(getattr(stat, "st_mtime", None)),
-        "exif": {"status": "unavailable", "reason": "Not an image file", "values": {}},
+        "exif": {"status": "not_applicable", "reason": "Not an image file", "values": {}},
         "pdf": {
-            "status": "unavailable",
+            "status": "not_applicable",
             "reason": "Not a PDF file",
             "values": {},
         },

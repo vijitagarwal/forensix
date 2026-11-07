@@ -10,9 +10,9 @@ def test_analyze_file_returns_structured_result(tmp_path):
     assert result["original_filename"] == "evidence.txt"
     assert result["file_size"] == len(b"forensic sample")
     assert len(result["sha256_hash"]) == 64
-    assert result["detected_file_type"] == "Unknown"
-    assert result["extension_mismatch"] is True
-    assert any("not proof" in warning for warning in result["analysis_warnings"])
+    assert result["detected_file_type"] == "Plain Text"
+    assert result["extension_mismatch"] is False
+    assert not result["analysis_warnings"]
 
 
 def test_engine_supports_multiple_files_and_missing_files(tmp_path):

@@ -24,6 +24,8 @@ limits of automated findings explicit.
 - Read-only SHA-256 hashing with bounded-memory file reads.
 - Magic-byte identification for PDF, PNG, JPEG, GIF, ZIP, RAR, MP3, WAV,
   MP4, and common Windows executable files.
+- Conservative UTF-8 plain-text identification for text without a known
+  binary signature.
 - Extension mismatch warnings that do not claim malicious intent.
 - Filesystem metadata plus image EXIF and PDF document metadata where
   available.
@@ -88,7 +90,8 @@ cloud service, or external evidence store is required.
 1. Evidence is received through the Streamlit uploader and copied to a
    temporary path; uploaded files are never executed.
 2. The temporary copy is read to calculate a SHA-256 digest, inspect magic
-   bytes, collect supported metadata, and record warnings.
+   bytes, conservatively identify plain text when appropriate, collect
+   supported metadata, and record warnings.
 3. A Chain of Custody record stores the original filename, a unique evidence
    ID, UTC acquisition time, acquisition hash, size, investigator identifier,
    and notes.
@@ -98,6 +101,10 @@ cloud service, or external evidence store is required.
    tampering, metadata does not prove who created a file, and a hash match
    establishes equality of the compared byte sequences rather than
    authenticity or provenance.
+
+Metadata extractors report `extracted`, `missing`, `not_applicable`, or
+`unavailable`. Only `unavailable` for an applicable extractor is surfaced as
+an extraction warning.
 
 ## SHA-256 integrity verification
 

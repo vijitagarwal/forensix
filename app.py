@@ -183,7 +183,20 @@ def render_record(record: dict[str, object], index: int) -> None:
         if warnings:
             for warning in warnings:
                 st.warning(str(warning))
-        st.json(record.get("extracted_metadata", {}))
+        metadata = record.get("extracted_metadata", {})
+        if isinstance(metadata, dict):
+            st.caption("Metadata extraction status")
+            st.table(
+                [
+                    {"Extractor": "EXIF", "Status": metadata.get("exif", {}).get("status", "unavailable")}
+                    if isinstance(metadata.get("exif"), dict)
+                    else {"Extractor": "EXIF", "Status": "unavailable"},
+                    {"Extractor": "PDF", "Status": metadata.get("pdf", {}).get("status", "unavailable")}
+                    if isinstance(metadata.get("pdf"), dict)
+                    else {"Extractor": "PDF", "Status": "unavailable"},
+                ]
+            )
+        st.json(metadata)
 
 
 def render_analyzer() -> None:

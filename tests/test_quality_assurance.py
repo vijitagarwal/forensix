@@ -31,13 +31,13 @@ def test_valid_pdf_png_jpeg_and_plain_text(tmp_path):
     assert analyze_file(pdf)["detected_file_type"] == "PDF"
     assert analyze_file(png)["detected_file_type"] == "PNG"
     assert analyze_file(jpeg)["detected_file_type"] == "JPEG"
-    assert analyze_file(text)["detected_file_type"] == "Unknown"
+    assert analyze_file(text)["detected_file_type"] == "Plain Text"
 
 
 def test_unsupported_and_malformed_files_are_reported_without_crashing(tmp_path):
     unsupported = tmp_path / "sample.xyz"
     malformed_pdf = tmp_path / "broken.pdf"
-    unsupported.write_bytes(b"unsupported format")
+    unsupported.write_bytes(b"\x01\x02\x03\xff\xfe\x00")
     malformed_pdf.write_bytes(b"%PDF-not-valid")
 
     unsupported_result = analyze_file(unsupported)
