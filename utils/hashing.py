@@ -1,6 +1,6 @@
 """Hashing utilities for digital evidence integrity checks."""
 
-from hashlib import new
+import hashlib
 from pathlib import Path
 
 
@@ -18,7 +18,7 @@ def calculate_hash(file_path: str | Path, algorithm: str = "sha256") -> str:
         raise ValueError("ForensiX currently supports SHA-256 hashing only")
 
     try:
-        digest = new("sha256")
+        digest = hashlib.sha256()
         with path.open("rb") as evidence_file:
             for chunk in iter(lambda: evidence_file.read(CHUNK_SIZE), b""):
                 digest.update(chunk)

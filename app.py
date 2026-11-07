@@ -252,7 +252,30 @@ def render_integrity() -> None:
     """Render byte-sequence integrity comparison."""
     render_header("Integrity verification", "Compare a current SHA-256 digest with an expected value.")
     upload = st.file_uploader("Upload previously analysed evidence", key="integrity_upload")
-    expected = st.text_input("Expected SHA-256 hash", placeholder="64 hexadecimal characters")
+    registered_records = st.session_state.evidence_register
+    evidence_options = ["Unregistered upload"] + [
+        f"{record['evidence_id']} | {record['original_filename']}"
+        for record in registered_records
+    ]
+    selected_option = st.selectbox("Evidence record", evidence_options)
+    selected_id = (
+        selected_option.split(" | ", 1)[0]
+        if selected_option != "Unregistered upload"
+        else None
+    )
+    selected_record = next(
+        (
+            record
+            for record in registered_records
+            if record["evidence_id"] == selected_id
+        ),
+        None,
+    )
+    expected = st.text_input(
+        "Expected SHA-256 hash",
+        value=selected_record["acquisition_hash"] if selected_record else "",
+        placeholder="64 hexadecimal characters",
+    )
     if st.button("Verify integrity", type="primary"):
         if upload is None:
             st.error("Upload a file before verifying integrity.")
@@ -260,6 +283,12 @@ def render_integrity() -> None:
         normalized = expected.strip().lower()
         if len(normalized) != 64 or any(character not in "0123456789abcdef" for character in normalized):
             st.error("Enter a valid 64-character hexadecimal SHA-256 hash.")
+            return
+        if selected_record and normalized != selected_record["acquisition_hash"]:
+            st.error(
+                "The expected hash must match the selected evidence record's "
+                "acquisition hash."
+            )
             return
         suffix = Path(upload.name).suffix
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temporary:
@@ -273,39 +302,22 @@ def render_integrity() -> None:
         finally:
             temporary_path.unlink(missing_ok=True)
         if current == normalized:
-            matching = next(
-                (
-                    record
-                    for record in st.session_state.evidence_register
-                    if record.get("acquisition_hash") == normalized
-                    or record.get("original_filename") == upload.name
-                ),
-                None,
-            )
-            if matching:
-                matching["current_integrity_status"] = "MATCH"
+            if selected_record:
+                selected_record["current_integrity_status"] = "MATCH"
                 append_event(
                     st.session_state.custody_events,
-                    evidence_id=matching["evidence_id"],
+                    evidence_id=selected_record["evidence_id"],
                     event_type="integrity_verified",
                     event_description=f"Integrity verified: {upload.name}",
                     current_hash=current,
                 )
             st.markdown('<div class="fx-success"><strong>MATCH</strong> — the compared byte sequences are equal.</div>', unsafe_allow_html=True)
         else:
-            matching = next(
-                (
-                    record
-                    for record in st.session_state.evidence_register
-                    if record.get("original_filename") == upload.name
-                ),
-                None,
-            )
-            if matching:
-                matching["current_integrity_status"] = "MISMATCH"
+            if selected_record:
+                selected_record["current_integrity_status"] = "MISMATCH"
                 append_event(
                     st.session_state.custody_events,
-                    evidence_id=matching["evidence_id"],
+                    evidence_id=selected_record["evidence_id"],
                     event_type="integrity_mismatch_detected",
                     event_description=f"Integrity mismatch detected: {upload.name}",
                     current_hash=current,

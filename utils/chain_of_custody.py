@@ -52,7 +52,9 @@ def register_evidence(
     """Register newly acquired evidence and append its acquisition event."""
     if not investigator.strip():
         raise ValueError("An investigator name or identifier is required")
-    if len(acquisition_hash) != 64:
+    if len(acquisition_hash) != 64 or any(
+        character not in "0123456789abcdefABCDEF" for character in acquisition_hash
+    ):
         raise ValueError("The acquisition hash must be a SHA-256 hexadecimal digest")
     evidence = {
         "evidence_id": f"FX-{uuid4().hex[:12].upper()}",
